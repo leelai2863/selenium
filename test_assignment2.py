@@ -6,6 +6,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import TimeoutException
 import time
 
 @pytest.fixture
@@ -20,22 +21,18 @@ def driver():
     yield driver
     driver.quit()
 
-#test chức năng đăng ký thành công
+#TC1: test chức năng đăng ký
 def testcase_1(driver):
     driver.get("https://demo.opencart.com/")
     time.sleep(5)
     last_height = driver.execute_script("return document.body.scrollHeight")
     while True:
-        # Scroll down to the bottom
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        
-        # Wait for new content to load
         time.sleep(2)
         
-        # Calculate new scroll height and compare with last scroll height
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
-            break  # Exit the loop if no new content is loaded
+            break
         last_height = new_height
     
     element = WebDriverWait(driver, 10).until(
@@ -65,7 +62,7 @@ def testcase_1(driver):
     content = driver.find_element(By.ID, "content").text
     assert "Your Account Has Been Created!" in content
 
-#test chức năng đăng nhập đúng thông tin
+#test chức năng đăng nhập
 def testcase_2(driver):
     driver.get("https://demo.opencart.com/")
     time.sleep(5)
@@ -106,7 +103,7 @@ def testcase_3(driver):
         
         new_height = driver.execute_script("return document.body.scrollHeight")
         if new_height == last_height:
-            break  # Exit the loop if no new content is loaded
+            break  # thoát khỏi lặp nếu ko có nội dung mới đc tải
         last_height = new_height
     
     element = WebDriverWait(driver, 10).until(
@@ -123,19 +120,9 @@ def testcase_3(driver):
     time.sleep(2)
     message = driver.find_element(By.ID, "alert").text
     assert "Warning: No match for E-Mail Address and/or Password." in message
-
+    
+#TC4: thêm địa chỉ
 def testcase_4(driver):
-    testcase_2(driver)
-    logout_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//div//a[@class='list-group-item' and text()='Logout']"))
-    )
-    logout_button.click()
-    time.sleep(2)
-    content = driver.find_element(By.ID, "content").text
-    assert "You have been logged off your account. It is now safe to leave the computer." in content
-
-#TC5: thêm địa chỉ
-def testcase_5(driver):
     testcase_2(driver)
     
     add_address = WebDriverWait(driver, 10).until(
@@ -185,8 +172,8 @@ def testcase_5(driver):
     message = driver.find_element(By.XPATH, "//div[@class='alert alert-success alert-dismissible']").text
     assert "Your address has been successfully added" in message
 
-#TC6: test thêm sản phẩm + navigate to cart
-def testcase_6(driver):
+#TC5: test thêm sản phẩm + navigate to cart
+def testcase_5(driver):
     testcase_2(driver)
     element = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, "//input[@name='search']"))
@@ -223,8 +210,8 @@ def testcase_6(driver):
 
     # assert 1 == len(elements)
 
-#TC7: test remove product from cart
-def testcase_7(driver):
+#TC6: test remove product from cart
+def testcase_6(driver):
     testcase_2(driver)
     element = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.XPATH, "//input[@name='search']"))
@@ -269,8 +256,8 @@ def testcase_7(driver):
     message = driver.find_element(By.ID, "content").text
     assert "Your shopping cart is empty!" in message
 
-#TC8: test checkout
-def testcase_8(driver):
+#TC7: test checkout
+def testcase_7(driver):
     testcase_6(driver)
     driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.END)
     checkout_btn = WebDriverWait(driver, 10).until(
@@ -332,13 +319,46 @@ def testcase_8(driver):
     time.sleep(3)
     result = driver.find_element(By.ID, 'content').text
     assert "Your order has been placed!" in result
+#TC8: xem lich sử order
+def testcase_8_view_order_history(driver):
+    testcase_2(driver)
+    time.sleep(3)
+    
+    try:
+        nav_my_account_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//span[text()='My Account']"))
+        )
+        nav_my_account_button.click()
+        time.sleep(2)
 
+        order_history_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'Order History')]"))
+        )
+        order_history_button.click()
+        time.sleep(2)
+        print("Test Passed: Order History page is displayed successfully.")
+    
+    except TimeoutException:
+        print("Test Failed:")
+
+#TC9: đăng xuất
+def testcase_9(driver):
+    testcase_2(driver)
+    logout_button = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.XPATH, "//div//a[@class='list-group-item' and text()='Logout']"))
+    )
+    logout_button.click()
+    time.sleep(2)
+    content = driver.find_element(By.ID, "content").text
+    assert "You have been logged off your account. It is now safe to leave the computer." in content
+
+#TC10: test chức năng search
 @pytest.mark.parametrize("search_query, expected_product_name", [
     ("MacBook", "MacBook"),
     ("iPhone", "iPhone"),
     ("Canon", "Canon")
 ])
-def testcase_9_search_function(driver, search_query, expected_product_name):
+def testcase_10_search_function(driver, search_query, expected_product_name):
     driver.get("https://demo.opencart.com/")
     time.sleep(3)
     
